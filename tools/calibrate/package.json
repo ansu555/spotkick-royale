@@ -1,0 +1,13 @@
+{
+  "name": "penalty-calibrate",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Build-time calibration of the goalkeeper's save probability per goal cell for the penalty game. Produces a 48-value basis-point lookup table for the smart contract.",
+  "scripts": {
+    "calibrate": "node calibrate.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}
