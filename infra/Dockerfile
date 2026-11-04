@@ -34,8 +34,9 @@ COPY server/pnpm-lock.yaml ./server/pnpm-lock.yaml
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/shared/pnpm-lock.yaml ./packages/shared/pnpm-lock.yaml
 # Prefer the committed lockfiles; fall back to generating on first build.
-RUN cd server && (pnpm install --frozen-lockfile || pnpm install)
-RUN cd packages/shared && (pnpm install --frozen-lockfile || pnpm install)
+# NODE_ENV=production would make pnpm skip devDependencies, but `tsx` (the runtime) is one.
+RUN cd server && (pnpm install --prod=false --frozen-lockfile || pnpm install --prod=false)
+RUN cd packages/shared && (pnpm install --prod=false --frozen-lockfile || pnpm install --prod=false)
 
 # ---------------------------------------------------------------------------
 # runtime — source + node_modules, run by an unprivileged user
