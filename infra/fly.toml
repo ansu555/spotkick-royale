@@ -1,0 +1,41 @@
+# Spotkick game server (Monad). Deployed with `fly deploy`.
+# See infra/.env.example for required secrets → set them with `fly secrets set`.
+
+app = "spotkick-server"
+# primary_region = "iad"
+
+[build]
+  dockerfile = "infra/Dockerfile"
+
+[deploy]
+  # Run DB migrations before the new version starts serving traffic.
+  release_command = "pnpm db:migrate"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+
+  # The driver/indexer is a long-lived loop that must never idle-stop.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  # WebSocket-friendly: ALPN http/1.1 keeps raw `ws` upgrades from being
+  # forced onto HTTP/2, and request-based concurrency avoids treating a
+  # long-lived socket as a stuck request.
+  [http_service.tls_options]
+    alpn = ["http/1.1"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 500
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/api/health"
+    protocol = "http"

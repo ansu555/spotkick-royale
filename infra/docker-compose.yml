@@ -1,0 +1,59 @@
+# Local development stack for the Spotkick game server.
+# Bring up the backing services (Postgres, Redis, and a local Anvil chain):
+#   docker compose -f infra/docker-compose.yml up -d
+services:
+  postgres:
+    image: postgres:16
+    container_name: spotkick-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: spotkick
+      POSTGRES_PASSWORD: spotkick   # local dev only — not a production secret
+      POSTGRES_DB: spotkick
+    ports:
+      - "5432:5432"
+    volumes:
+      - spotkick_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spotkick -d spotkick"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7
+    container_name: spotkick-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - spotkick_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    container_name: spotkick-anvil
+    restart: unless-stopped
+    # The image entrypoint is `/bin/sh -c`, which swallows an exec-form command; call anvil directly.
+    # --slots-in-an-epoch 1 makes the `finalized` tag follow the head (the indexer reads finalized logs).
+    entrypoint: ["anvil"]
+    command: ["--host", "0.0.0.0", "--chain-id", "31337", "--block-time", "1", "--slots-in-an-epoch", "1"]
+    ports:
+      - "8545:8545"
+    healthcheck:
+      # Anvil has no built-in probe; confirm the JSON-RPC endpoint answers eth_chainId.
+      test: ["CMD-SHELL", "cast chain-id --rpc-url http://127.0.0.1:8545 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  spotkick_pg_data:
+  spotkick_redis_data:
