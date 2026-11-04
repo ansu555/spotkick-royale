@@ -584,6 +584,25 @@ contract SpotkickRoyaleTest is Base {
         royale.refundStalled(g);
     }
 
+    function test_soloGame_startsAndAlwaysFinishes() public {
+        vm.prank(owner);
+        royale.setMinPlayers(1);
+        for (uint256 i = 0; i < 40; ++i) {
+            (uint64 g,) = enterAs(i, T0);
+            assertEq(royale.getGame(g).phaseEndsAt, block.timestamp + 15, "countdown at 1 seat");
+            uint128 pot = royale.getGame(g).pot;
+            uint256 bal = p(i).balance;
+            vm.warp(block.timestamp + 15);
+            royale.startGame(g);
+            playRound(g, seed(i + 9000)); // covers both Goal and Saved outcomes
+            ISpotkickRoyale.GameView memory v = royale.getGame(g);
+            assertEq(uint8(v.phase), uint8(ISpotkickRoyale.Phase.Finished));
+            assertEq(v.aliveMask, 1);
+            assertEq(v.pot, 0);
+            assertEq(p(i).balance - bal, pot, "solo player gets pot back");
+        }
+    }
+
     function test_gameFinished_event() public {
         uint64 g = toPicking(3, T0);
         uint128 pot = royale.getGame(g).pot;
@@ -911,9 +930,10 @@ contract SpotkickRoyaleTest is Base {
     function test_admin_minPlayersBounds() public {
         vm.startPrank(owner);
         vm.expectRevert(SpotkickRoyale.BadMinPlayers.selector);
-        royale.setMinPlayers(1);
+        royale.setMinPlayers(0);
         vm.expectRevert(SpotkickRoyale.BadMinPlayers.selector);
         royale.setMinPlayers(11);
+        royale.setMinPlayers(1);
         vm.stopPrank();
     }
 

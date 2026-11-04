@@ -216,3 +216,18 @@ body.royale #reticle .dot { fill: #f2d21b; }
 .ry-down .lb-join { margin-top: 12px; }
 .ry-conn { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 6px 12px; border-radius: 3px; background: rgba(232, 56, 47, 0.18); border: 1px solid var(--red); font: 600 12px var(--f-body); }
 .ry-conn[hidden] { display: none; }
+
+/* ---- bots (display-only lobby fillers) ---- */
+.lb-seats i.bot { background: repeating-linear-gradient(45deg, #5b5a52 0 2px, var(--line) 2px 4px); }
+.lb-botn { font-style: normal; color: var(--dim); }
+.lb-bots { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.lb-bots-t { font: 700 13px var(--f-body); color: var(--chalk); }
+.lb-bots-t small { display: block; margin-top: 2px; font: 400 11.5px/1.4 var(--f-body); color: var(--dim); }
+.sw { flex: none; position: relative; width: 40px; height: 22px; border-radius: 11px; border: 1px solid var(--line-2); background: var(--line); cursor: pointer; padding: 0; transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease); }
+.sw i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--mute); transition: transform 0.2s var(--ease), background-color 0.2s var(--ease); }
+.sw[aria-checked="true"] { background: rgba(57, 192, 114, 0.25); border-color: var(--green); }
+.sw[aria-checked="true"] i { transform: translateX(18px); background: var(--green); }
+.sw:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+#ry-feed li.bot { grid-template-columns: 1fr auto auto; }
+#ry-feed li.bot b { color: var(--mute); }
+#ry-feed li.bot em { grid-column: auto; font: 700 9px var(--f-mono); letter-spacing: 0.08em; color: var(--dim); border: 1px solid var(--line-2); border-radius: 3px; padding: 0 4px; justify-self: end; }

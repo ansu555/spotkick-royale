@@ -3,7 +3,7 @@
 // (0 = goal centre), y in [140, 2300] (0 = ground).
 
 export const MAX_SEATS = 10;
-export const MIN_PLAYERS = 3;
+export const MIN_PLAYERS = 1;
 export const LOBBY_COUNTDOWN_SECS = 15;
 export const PICK_SECS = 7;
 export const BETWEEN_SECS = 9;

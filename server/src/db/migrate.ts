@@ -63,6 +63,41 @@ export async function migrateDatabase(databaseUrl: string): Promise<string[]> {
   }
 }
 
+/** Chain-derived tables: everything here can be rebuilt by re-indexing from START_BLOCK. */
+const CHAIN_TABLES = ["games", "seats", "picks", "rounds", "cashouts", "players", "wins", "rain", "raw_events", "indexer_cursor"];
+const DEPLOYMENT_ROW = "deployment"; // indexer_cursor row; block_hash holds the fingerprint
+
+/**
+ * Clears all chain-derived tables when `fingerprint` (chain + contract addresses + start block) differs from the one
+ * stored by the previous boot, so a contract redeploy (new address, game ids restarting at 1) never mixes with rows
+ * indexed from the old contract. Returns true when a reset happened. Same advisory lock as migrations.
+ */
+export async function resetIfDeploymentChanged(databaseUrl: string, fingerprint: string, startBlock: bigint): Promise<boolean> {
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  try {
+    await client.query("SELECT pg_advisory_lock(7203001)");
+    const r = await client.query<{ block_hash: string | null }>("SELECT block_hash FROM indexer_cursor WHERE name = $1", [DEPLOYMENT_ROW]);
+    if (r.rows[0]?.block_hash === fingerprint) return false;
+    await client.query("BEGIN");
+    try {
+      await client.query(`TRUNCATE ${CHAIN_TABLES.join(", ")}`);
+      await client.query(
+        "INSERT INTO indexer_cursor (name, block_number, block_hash, updated_at) VALUES ($1, $2, $3, $4)",
+        [DEPLOYMENT_ROW, startBlock.toString(), fingerprint, Math.floor(Date.now() / 1000)],
+      );
+      await client.query("COMMIT");
+    } catch (e) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw e;
+    }
+    return true;
+  } finally {
+    await client.query("SELECT pg_advisory_unlock(7203001)").catch(() => undefined);
+    await client.end();
+  }
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const url = process.env.DATABASE_URL;
   if (!url) {

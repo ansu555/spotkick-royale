@@ -422,7 +422,7 @@ contract SpotkickRoyale is ISpotkickRoyale, Ownable2Step, Pausable, ReentrancyGu
     }
 
     function setMinPlayers(uint8 n) external onlyOwner {
-        if (n < 2 || n > Config.MAX_SEATS) revert BadMinPlayers();
+        if (n < 1 || n > Config.MAX_SEATS) revert BadMinPlayers();
         minPlayers = n;
         emit MinPlayersSet(n);
     }
@@ -488,6 +488,8 @@ contract SpotkickRoyale is ISpotkickRoyale, Ownable2Step, Pausable, ReentrancyGu
         bool saved = KeeperModel.isSaved(seed, rr.saveBps);
         rr.outcome = saved ? Outcome.Saved : Outcome.Goal;
         (rr.survivorMask, rr.radiusMm,) = RoyaleMath.blast(c.aliveMask, xs, ys, rr.targetX, rr.targetY, !saved);
+        // Solo game (1 alive) + save would eliminate everyone; never allow an empty survivor set.
+        if (rr.survivorMask == 0) rr.survivorMask = c.aliveMask;
     }
 
     function _emitResolved(uint64 gameId, uint8 round, RoundResult memory rr, uint64 nextPhaseAt) private {

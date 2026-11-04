@@ -7,7 +7,7 @@ Plan: `~/.claude/plans/ok-listen-i-dont-eventual-axolotl.md`. Solidity API: `con
 | Name | Value | Notes |
 |---|---|---|
 | MAX_SEATS | 10 | |
-| MIN_PLAYERS | 3 | countdown starts when this many seated |
+| MIN_PLAYERS | 1 | countdown starts when this many seated; a solo game plays one round and returns the pot (entry minus fee) |
 | LOBBY_COUNTDOWN_SECS | 15 | |
 | PICK_SECS | 7 | |
 | BETWEEN_SECS | 9 | cash-out window after a resolve; covers client animations |

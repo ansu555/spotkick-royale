@@ -5,7 +5,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { registerApi } from "./api/index.js";
 import { createChainClient, createTierProvider, createLogger, parseEnv, ConfigError } from "./config/index.js";
 import { createPriceFeed } from "./config/external.js";
-import { createDb, createSnapshots, migrateDatabase } from "./db/index.js";
+import { createDb, createSnapshots, migrateDatabase, resetIfDeploymentChanged } from "./db/index.js";
 import { Driver } from "./driver/index.js";
 import { MockKeeper } from "./driver/mock-keeper.js";
 import { Indexer, createRedisBus, createViemReader } from "./indexer/index.js";
@@ -29,6 +29,10 @@ async function main(): Promise<void> {
   // db
   const ran = await migrateDatabase(env.DATABASE_URL);
   if (ran.length) log.info("migrations applied", { files: ran });
+  const deployment = [env.CHAIN_ID, env.ROYALE_ADDRESS.toLowerCase(), env.RAIN_ADDRESS.toLowerCase(), env.START_BLOCK].join(":");
+  if (await resetIfDeploymentChanged(env.DATABASE_URL, deployment, env.START_BLOCK)) {
+    log.warn("contract deployment changed; chain-derived tables cleared, re-indexing from START_BLOCK", { deployment });
+  }
   const dbh = createDb(env.DATABASE_URL);
 
   // redis: one command connection (publish, leader lock, heartbeat); the gateway opens its own subscriber

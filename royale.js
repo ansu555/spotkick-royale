@@ -150,11 +150,15 @@ export function createRoyale(api) {
         <div class="seg" id="lb-tiers" role="radiogroup" aria-label="Entry"></div>
         <button class="btn btn-y lb-join" id="lb-join" disabled>Enter</button>
         <button class="btn btn-line lb-leave" id="lb-leave" hidden>Leave and refund</button>
+        <div class="lb-bots">
+          <span class="lb-bots-t">Bots<small>Simulated seat fillers. They pay nothing, aren't in the pot and can't win.</small></span>
+          <button class="sw" id="lb-bots" role="switch" aria-checked="true" aria-label="Show bots"><i></i></button>
+        </div>
         <p class="lb-fine" id="lb-fine">Last player standing takes the pool. Cash out after any round you survive. 4% house edge.</p>
       </div>
       <div class="lb-side">
         <div class="lb-seats" id="lb-seats">${"<i></i>".repeat(SEATS)}</div>
-        <div class="lb-meta"><span><b id="lb-filled">0</b>/${SEATS} seated</span><span id="lb-clock">Waiting for players</span></div>
+        <div class="lb-meta"><span><b id="lb-filled">0</b>/${SEATS} seated<em class="lb-botn" id="lb-botn"></em></span><span id="lb-clock">Waiting for players</span></div>
         <ol class="lb-how">
           <li>Click the goal to pick your spot.</li>
           <li>The contract locks the shot onto one point.</li>
@@ -186,13 +190,14 @@ export function createRoyale(api) {
     </div>`;
   api.hud.appendChild(root);
   const $ = (id) => root.querySelector("#" + id);
-  for (const id of ["ry-again", "ry-cash", "ry-offer-cash", "ry-offer-ride", "ry-lobby", "ry-down", "dn-retry", "lb-leave"]) $(id).style.pointerEvents = "auto";
+  for (const id of ["ry-again", "ry-cash", "ry-offer-cash", "ry-offer-ride", "ry-lobby", "ry-down", "dn-retry", "lb-leave", "lb-bots"]) $(id).style.pointerEvents = "auto";
   $("ry-again").onclick = () => openLobby();
   $("ry-cash").onclick = () => cashOut();
   $("ry-offer-cash").onclick = () => cashOut();
   $("ry-offer-ride").onclick = () => { if (phase === "card") t = Math.max(t, T.card - 0.3); };
   $("lb-join").onclick = () => join();
   $("lb-leave").onclick = () => leave();
+  $("lb-bots").onclick = () => setBots(!botsOn);
   $("dn-retry").onclick = () => net.retry();
   $("dn-api").textContent = `API: ${net.apiBase}`;
 
@@ -256,6 +261,52 @@ export function createRoyale(api) {
     net.socket.want("royale", ["rooms", id ? `game:${id}` : null]);
     renderLobby();
   }
+
+  // ---------------- bots (display only) ----------------
+  // Simulated seat fillers shown in the lobby so it never looks empty. They are NOT on-chain: they pay
+  // nothing, are not in the pot or the seat count, and disappear when the real royale kicks off.
+  const BOT_NAMES = ["Rooney_9", "KeeperKing", "0xStriker", "TopBins", "Panenka", "NutmegNina", "CrossbarCal", "VolleyVic", "SweeperSam", "Cannon7", "Dribblr", "SkyHigh"];
+  let botsOn = true;
+  try { botsOn = localStorage.getItem("sk:bots") !== "0"; } catch { /* ignore */ }
+  let bots = [];                  // names currently shown
+  let botTimer = null;
+  const botCap = () => (net.cfg && phase === "lobby" && (!G || G.phase === "lobby") ? Math.max(0, Math.min(SEATS - 1 - lobbyCount(), 7)) : 0);
+
+  function feedBot(name, left) {
+    const ul = $("ry-feed");
+    const li = document.createElement("li");
+    li.className = "bot";
+    li.innerHTML = `<b></b><span>${left ? "left" : "joined"}</span><em>BOT</em>`;
+    li.querySelector("b").textContent = name;
+    ul.prepend(li);
+    while (ul.children.length > 11) ul.lastChild.remove();
+  }
+
+  function setBots(on) {
+    botsOn = !!on;
+    try { localStorage.setItem("sk:bots", botsOn ? "1" : "0"); } catch { /* ignore */ }
+    if (!botsOn) { bots = []; root.querySelectorAll("#ry-feed li.bot").forEach((li) => li.remove()); }
+    sfx.play("click");
+    renderLobby();
+  }
+
+  function botTick() {
+    const cap = botsOn ? botCap() : 0;
+    let changed = false;
+    if (bots.length > cap) {
+      bots.length = cap; changed = true;
+      if (!cap) root.querySelectorAll("#ry-feed li.bot").forEach((li) => li.remove());
+    } else if (bots.length < cap) {
+      const free = BOT_NAMES.filter((n) => !bots.includes(n));
+      const name = free[Math.floor(Math.random() * free.length)];
+      if (name) { bots.push(name); feedBot(name, false); changed = true; }
+    } else if (bots.length && Math.random() < 0.12) {
+      feedBot(bots.pop(), true); changed = true; // an occasional bot drops out so the room feels alive
+    }
+    if (changed) renderLobby();
+    botTimer = setTimeout(botTick, 1200 + Math.random() * 2600);
+  }
+  botTimer = setTimeout(botTick, 900);
 
   // ---------------- lobby ----------------
   function openLobby() {
@@ -332,7 +383,19 @@ export function createRoyale(api) {
     for (let i = 0; i < cells.length; i++) {
       const p = bySeat(i);
       cells[i].className = p ? (p.you ? "you" : "on") : !G && i < n ? "on" : "";
+      cells[i].removeAttribute("title");
     }
+    const cap = botsOn ? botCap() : 0;
+    if (bots.length > cap) bots.length = cap;
+    let shown = 0;
+    for (let i = 0; i < cells.length && shown < bots.length; i++) {
+      if (cells[i].className) continue;
+      cells[i].className = "bot";
+      cells[i].title = `${bots[shown]} (simulated bot)`;
+      shown++;
+    }
+    $("lb-botn").textContent = bots.length ? ` · +${bots.length} bots` : "";
+    $("lb-bots").setAttribute("aria-checked", botsOn);
     const mm = me();
     const seated = !!mm && phase === "lobby";
     root.querySelectorAll("#lb-tiers button").forEach((b) => {
@@ -356,7 +419,7 @@ export function createRoyale(api) {
     btn.classList.toggle("in", seated);
     $("lb-leave").hidden = !seated;
     $("lb-leave").disabled = busy;
-    $("lb-fine").textContent = `Last player standing takes the pool. Cash out after any round you survive. ${(K.FEE_BPS / 100).toFixed(0)}% house edge.${K.MIN_PLAYERS ? ` Kick-off ${K.LOBBY_COUNTDOWN_SECS}s after ${K.MIN_PLAYERS} players are seated; leave any time before for a full refund.` : ""}`;
+    $("lb-fine").textContent = `Last player standing takes the pool. Cash out after any round you survive. ${(K.FEE_BPS / 100).toFixed(0)}% house edge.${K.MIN_PLAYERS ? ` Kick-off ${K.LOBBY_COUNTDOWN_SECS}s after ${K.MIN_PLAYERS} player${K.MIN_PLAYERS > 1 ? "s are" : " is"} seated; leave any time before for a full refund.` : ""}`;
     if (lobbyView) { $("ry-count").textContent = `${n}/${SEATS}`; updateStats(); }
   }
 

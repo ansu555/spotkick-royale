@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 /// @notice Constants mirrored from docs/INTERFACES.md section 1. Keep in sync with packages/shared/src/constants.ts.
 library Config {
     uint8 internal constant MAX_SEATS = 10;
-    uint8 internal constant MIN_PLAYERS = 3; // default; owner-configurable via setMinPlayers
+    uint8 internal constant MIN_PLAYERS = 1; // default; owner-configurable via setMinPlayers
     uint64 internal constant LOBBY_COUNTDOWN_SECS = 15;
     uint64 internal constant PICK_SECS = 7;
     uint64 internal constant BETWEEN_SECS = 9;

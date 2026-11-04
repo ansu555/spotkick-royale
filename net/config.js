@@ -95,7 +95,7 @@ export function constants(cfg) {
   };
   return {
     MAX_SEATS: get("MAX_SEATS", 10),
-    MIN_PLAYERS: get("MIN_PLAYERS", 3),
+    MIN_PLAYERS: get("MIN_PLAYERS", 1),
     LOBBY_COUNTDOWN_SECS: get("LOBBY_COUNTDOWN_SECS", 15),
     PICK_SECS: get("PICK_SECS", 7),
     BETWEEN_SECS: get("BETWEEN_SECS", 9),

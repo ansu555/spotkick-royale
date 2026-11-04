@@ -1,7 +1,7 @@
 // Mirrors docs/INTERFACES.md section 1 (contract `Config`). Exposed verbatim through GET /api/config.
 export const CONSTANTS = {
   MAX_SEATS: 10,
-  MIN_PLAYERS: 3,
+  MIN_PLAYERS: 1,
   LOBBY_COUNTDOWN_SECS: 15,
   PICK_SECS: 7,
   BETWEEN_SECS: 9,

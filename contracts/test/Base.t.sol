@@ -30,6 +30,7 @@ abstract contract Base is Test {
         royale.setTier(T0, V0);
         royale.setTier(T1, V1);
         royale.fundEntropy{value: 50 ether}();
+        royale.setMinPlayers(3); // unit tests exercise multi-player lobby rules; solo covered explicitly
         vm.stopPrank();
     }
 
