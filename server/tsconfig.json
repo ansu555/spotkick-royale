@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    // `bundler` resolution (rather than NodeNext) so the server can import the shared
+    // reference at ../packages/shared/src/royale-math.ts, which uses extensionless relative
+    // imports and is authored under the shared package's own `bundler` tsconfig.
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

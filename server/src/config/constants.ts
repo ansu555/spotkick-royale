@@ -1,0 +1,23 @@
+// Mirrors docs/INTERFACES.md section 1 (contract `Config`). Exposed verbatim through GET /api/config.
+export const CONSTANTS = {
+  MAX_SEATS: 10,
+  MIN_PLAYERS: 3,
+  LOBBY_COUNTDOWN_SECS: 15,
+  PICK_SECS: 7,
+  BETWEEN_SECS: 9,
+  REPICK_CAP: 5,
+  FEE_BPS: 400,
+  STALL_TIMEOUT_SECS: 600,
+  ENTROPY_TIMEOUT_SECS: 120,
+  GOAL_W_MM: 7320,
+  GOAL_H_MM: 2440,
+  PICK_X_MAX: 3500,
+  PICK_Y_MIN: 140,
+  PICK_Y_MAX: 2300,
+  TARGET_X_MAX: 3300,
+  TARGET_Y_MIN: 250,
+  TARGET_Y_MAX: 2150,
+  BLAST_R_MM: 1500,
+  SAVE_COLS: 12,
+  SAVE_ROWS: 4,
+} as const;

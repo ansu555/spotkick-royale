@@ -1,0 +1,41 @@
+{
+  "name": "spotkick-server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node --import tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.0.0",
+    "drizzle-orm": "^0.44.0",
+    "ethers": "^6.17.0",
+    "fastify": "^5.0.0",
+    "ioredis": "^5.4.0",
+    "jose": "^5.9.0",
+    "pg": "^8.13.0",
+    "siwe": "^3.0.0",
+    "viem": "^2.21.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
+    "@types/ioredis-mock": "^8.2.8",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/ws": "^8.5.0",
+    "drizzle-kit": "^0.31.0",
+    "ioredis-mock": "^8.13.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
