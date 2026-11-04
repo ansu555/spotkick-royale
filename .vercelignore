@@ -1,0 +1,17 @@
+# leading "/" = project root only (a bare "sfx" also matched assets/sfx and dropped every sound)
+/mixamo
+/sfx
+/serve.py
+/README.md
+*.fbx
+# Server/contract infrastructure is not part of the static front-end deploy.
+# Root-anchored (leading "/") so a bare "assets" under / is NOT matched.
+/contracts
+/server
+/packages
+/tools
+/infra
+/docs
+/node_modules
+/cache
+/out
