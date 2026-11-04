@@ -1,0 +1,20 @@
+{
+  "name": "spotkick-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "End-to-end royale test against local anvil + real contracts + real server (test tooling only)",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "up": "./up.sh",
+    "play": "node --import tsx play.mjs",
+    "down": "./down.sh"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

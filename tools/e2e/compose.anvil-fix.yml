@@ -1,0 +1,17 @@
+# Test-tooling override for infra/docker-compose.yml (which we must not edit from here).
+# Two defects in the base file's anvil service (see FINDINGS.md):
+#  1. The foundry image's ENTRYPOINT is `/bin/sh -c`, so the exec-form `command: ["anvil","--host",...]` runs a bare `anvil`
+#     (the flags become positional args to sh): it binds 127.0.0.1 inside the container (unreachable from the host)
+#     and ignores --block-time. Fix: pass ONE string.
+#  2. (e2e-only addition) --slots-in-an-epoch 1: the server indexer reads the `finalized` block tag, which anvil sets ~64 blocks
+#     (2 epochs x 32 slots) behind head => ~64 s event lag with 1 s blocks. 1 slot/epoch makes finalized lag ~2 blocks like Monad.
+#  3. The healthcheck uses `curl`, which the image does not ship -> permanently "unhealthy". Fix: use `cast`.
+services:
+  anvil:
+    command: ["anvil --host 0.0.0.0 --chain-id 31337 --block-time 1 --slots-in-an-epoch 1"]
+    healthcheck:
+      test: ["CMD-SHELL", "cast chain-id --rpc-url http://127.0.0.1:8545 | grep -q 31337 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 3s
