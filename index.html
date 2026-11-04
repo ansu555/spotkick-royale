@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Spotkick — Penalty Royale on Monad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Big+Shoulders+Display:wght@500;700;800;900&family=Doto:ROND,wght@0..100,100..900&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="royale.css" />
+  <link rel="stylesheet" href="casino.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/",
+        "viem": "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm",
+        "viem/accounts": "https://cdn.jsdelivr.net/npm/viem@2.21.0/accounts/+esm"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main id="stage">
+  <canvas id="scene"></canvas>
+
+  <div id="hud">
+    <div id="rounds"></div>
+
+    <div class="player left">
+      <div class="avatar"><span>YOU</span></div>
+      <div class="score"><i class="ball-ico"></i><b id="score-you">0</b></div>
+      <div class="label">Goals</div>
+    </div>
+
+    <div class="player right">
+      <div class="avatar"><span>GK</span></div>
+      <div class="score"><i class="ball-ico"></i><b id="score-gk">0</b></div>
+      <div class="label">Saves</div>
+    </div>
+
+    <div id="reticle">
+      <svg viewBox="0 0 64 64">
+        <circle class="track" cx="32" cy="32" r="26" />
+        <circle class="power" cx="32" cy="32" r="26" />
+        <circle class="dot" cx="32" cy="32" r="3" />
+      </svg>
+    </div>
+
+    <div id="banner"><span></span></div>
+    <div id="hint">Aim with the cursor · Hold to power · Release to shoot</div>
+    <div id="fade"></div>
+    <div id="credit">Goalkeeper model: “Goal Keeper” by sandesh_bhat (CC BY 4.0)</div>
+  </div>
+  </main>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
