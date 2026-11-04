@@ -1,0 +1,24 @@
+{
+  "name": "@spotkick/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bit-exact randomness derivation shared by the Spotkick Royale contract and server (see docs/INTERFACES.md section 1 & 2).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "gen:vectors": "tsx scripts/gen-vectors.ts"
+  },
+  "dependencies": {
+    "viem": "^2.57.16"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
