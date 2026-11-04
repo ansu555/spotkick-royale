@@ -4,9 +4,13 @@
 
 const params = new URLSearchParams(location.search);
 
-/** API base: `?api=` override, else same-origin `/api`. */
+/** Hosted API (Railway). Used on any non-local host; local dev keeps the same-origin `/api`. */
+const HOSTED_API = "https://server-production-df0a.up.railway.app/api";
+const isLocalHost = /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost)$/.test(location.hostname);
+
+/** API base: `?api=` override, else same-origin `/api` locally, else the hosted API. */
 export function apiBase() {
-  return (params.get("api") ?? "/api").replace(/\/+$/, "");
+  return (params.get("api") ?? (isLocalHost ? "/api" : HOSTED_API)).replace(/\/+$/, "");
 }
 
 /** WebSocket URL: `?ws=` override, else derived from the API base (`.../api` -> `.../ws`). */
