@@ -1,0 +1,25 @@
+# Mixamo source clips (~8 MB each) and the upload mesh — download again from Mixamo and rebuild
+# with mixamo/build_keeper.sh. Only the compressed assets/*.glb are committed.
+mixamo/*.fbx
+mixamo/*.zip
+
+# intermediate build output
+assets/*_raw.glb
+assets/_test*.glb
+
+# tooling / OS / editor
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+*.swp
+.env
+.env.*
+.vercel
+
+# e2e run output
+tools/e2e/.state/
+tools/e2e/server.pid
+tools/e2e/results.json
