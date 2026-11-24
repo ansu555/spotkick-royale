@@ -151,7 +151,7 @@ export function createRoyale(api) {
         <button class="btn btn-y lb-join" id="lb-join" disabled>Enter</button>
         <button class="btn btn-line lb-leave" id="lb-leave" hidden>Leave and refund</button>
         <div class="lb-bots">
-          <span class="lb-bots-t">Bots<small>Simulated seat fillers. They pay nothing, aren't in the pot and can't win.</small></span>
+          <span class="lb-bots-t">Bots<small>Simulated players that fill the lobby and play the match with you. They pay nothing, aren't in the pot and can't win.</small></span>
           <button class="sw" id="lb-bots" role="switch" aria-checked="true" aria-label="Show bots"><i></i></button>
         </div>
         <p class="lb-fine" id="lb-fine">Last player standing takes the pool. Cash out after any round you survive. 4% house edge.</p>
@@ -237,7 +237,8 @@ export function createRoyale(api) {
 
   const me = () => players.find((p) => p.you);
   const alive = () => players.filter((p) => p.alive);
-  const seatValue = () => potMon / Math.max(1, alive().length);
+  const realAlive = () => players.filter((p) => p.alive && !p.bot); // on-chain seats only: money + game end
+  const seatValue = () => potMon / Math.max(1, realAlive().length);
   const mult = () => (entryMon > 0 ? seatValue() / entryMon : 0);
   const myAddr = () => net.wallet.state.address;
   const now = () => net.socket.now();
@@ -275,7 +276,7 @@ export function createRoyale(api) {
   function feedBot(name, left) {
     const ul = $("ry-feed");
     const li = document.createElement("li");
-    li.className = "bot";
+    li.className = "bot lb";
     li.innerHTML = `<b></b><span>${left ? "left" : "joined"}</span><em>BOT</em>`;
     li.querySelector("b").textContent = name;
     ul.prepend(li);
@@ -285,7 +286,10 @@ export function createRoyale(api) {
   function setBots(on) {
     botsOn = !!on;
     try { localStorage.setItem("sk:bots", botsOn ? "1" : "0"); } catch { /* ignore */ }
-    if (!botsOn) { bots = []; root.querySelectorAll("#ry-feed li.bot").forEach((li) => li.remove()); }
+    if (!botsOn) {
+      bots = []; root.querySelectorAll("#ry-feed li.bot").forEach((li) => li.remove());
+      if (players.some((p) => p.bot)) { clearBotPicks(); players = players.filter((p) => !p.bot); heatDirty = true; updatePickCount(); updateStats(); }
+    }
     sfx.play("click");
     renderLobby();
   }
@@ -295,7 +299,7 @@ export function createRoyale(api) {
     let changed = false;
     if (bots.length > cap) {
       bots.length = cap; changed = true;
-      if (!cap) root.querySelectorAll("#ry-feed li.bot").forEach((li) => li.remove());
+      if (!cap) root.querySelectorAll("#ry-feed li.bot.lb").forEach((li) => li.remove());
     } else if (bots.length < cap) {
       const free = BOT_NAMES.filter((n) => !bots.includes(n));
       const name = free[Math.floor(Math.random() * free.length)];
@@ -308,6 +312,43 @@ export function createRoyale(api) {
   }
   botTimer = setTimeout(botTick, 900);
 
+  // In-match bots (display only): they take free seats at kick-off, pick spots, and are knocked out by the
+  // real on-chain shot. They never touch the pot, seat value, cash-out or the winner (see realAlive()).
+  let botPickTimers = [];
+  const clearBotPicks = () => { botPickTimers.forEach(clearTimeout); botPickTimers = []; };
+  const randSpot = () => {
+    // loose preference for corners/low shots, like real players
+    const x = (Math.random() < 0.6 ? Math.sign(Math.random() - 0.5) * (1.6 + Math.random() * 1.7) : (Math.random() * 2 - 1) * 1.6);
+    const y = Math.random() < 0.55 ? 0.3 + Math.random() * 0.7 : 1.0 + Math.random() * 1.2;
+    return { x: clamp(x, -3.3, 3.3), y: clamp(y, 0.25, 2.2) };
+  };
+  function addMatchBots() {
+    if (!botsOn || !me() || players.some((p) => p.bot)) return;
+    const taken = new Set(players.map((p) => p.seat));
+    const free = [...Array(SEATS).keys()].filter((i) => !taken.has(i));
+    const want = Math.min(free.length, bots.length || 4 + Math.floor(Math.random() * 4));
+    const names = [...bots, ...BOT_NAMES.filter((n) => !bots.includes(n)).sort(() => Math.random() - 0.5)].slice(0, want);
+    names.forEach((name, i) => players.push({ seat: free[i], addr: `bot:${name}`, name, bot: true, alive: true, pos: null, mm: null, flash: 0, verdict: null }));
+  }
+  function scheduleBotPicks() {
+    clearBotPicks();
+    const win = Math.max(1.5, (G ? (G.endsAt - now()) / 1000 : K.PICK_SECS) - 0.8);
+    for (const p of players) {
+      if (!p.bot || !p.alive) continue;
+      p.pos = null; p.mm = null;
+      const r0 = round;
+      const pick = (moved) => {
+        if (phase !== "pick" || round !== r0 || !p.alive || !players.includes(p)) return;
+        const spot = randSpot();
+        const first = !p.pos;
+        p.pos = spot; p.flash = 1; heatDirty = true;
+        feed(p, spot, first ? "" : "MOVED");
+        if (!moved && Math.random() < 0.25) botPickTimers.push(setTimeout(() => pick(true), 600 + Math.random() * 1500));
+      };
+      botPickTimers.push(setTimeout(() => pick(false), (0.4 + Math.random() * 0.75 * win) * 1000));
+    }
+  }
+
   // ---------------- lobby ----------------
   function openLobby() {
     phase = "lobby";
@@ -317,6 +358,7 @@ export function createRoyale(api) {
     round = 0;
     target = null; result = null; blast = null; outcome = null;
     fin = null; pendingPick = false; cashing = false; resolvedQ = []; seenKickoff = false;
+    clearBotPicks();
     potMon = 0;
     G = null;
     viewId = null;
@@ -501,6 +543,7 @@ export function createRoyale(api) {
       p.you = !!myAddr() && addr === myAddr();
       next.push(p);
     });
+    for (const b of players) if (b.bot && !seats?.[b.seat]) next.push(b); // in-match bots keep their free seats
     const before = new Set(players.map((p) => p.seat + p.addr));
     const after = new Set(next.map((p) => p.seat + p.addr));
     players = next;
@@ -508,11 +551,11 @@ export function createRoyale(api) {
   }
 
   function applyAlive(mask) {
-    for (const p of players) p.alive = !!bit(mask, p.seat) && !p.cashed;
+    for (const p of players) if (!p.bot) p.alive = !!bit(mask, p.seat) && !p.cashed;
   }
 
   function applyPicks(picks) {
-    for (const p of players) { p.pos = null; p.mm = null; p.pending = false; p.spec = false; }
+    for (const p of players) if (!p.bot) { p.pos = null; p.mm = null; p.pending = false; p.spec = false; }
     for (const k of picks ?? []) {
       const p = bySeat(Number(k.seat));
       if (!p) continue;
@@ -526,6 +569,7 @@ export function createRoyale(api) {
 
   function enterRunning() {
     $("ry-lobby").classList.remove("show");
+    if (!seenKickoff) addMatchBots();
     startCount = Math.max(players.length, startCount);
     $("ry-feed-k").textContent = "Picks";
     if (!seenKickoff) {
@@ -628,6 +672,7 @@ export function createRoyale(api) {
     applyAlive(G.aliveMask);
     applyPicks(G.picks);
     $("ry-feed").innerHTML = "";
+    scheduleBotPicks();
     $("ry-card").classList.remove("show");
     $("ry-outcome").className = "ry-outcome";
     setPhase(`Round ${round}`, me()?.alive ? "Click the goal to pick your spot" : "Watching · picks open");
@@ -652,6 +697,7 @@ export function createRoyale(api) {
     const ul = $("ry-feed");
     const li = document.createElement("li");
     if (p.you) li.className = "you";
+    if (p.bot) { li.className = "bot"; tag = tag ? `${tag} · bot` : "BOT"; }
     li.innerHTML = `<b></b><span>${zoneName(spot).toLowerCase()}</span>${tag ? `<em>${tag.toLowerCase()}</em>` : ""}`;
     li.querySelector("b").textContent = p.you ? "You" : p.name;
     ul.prepend(li);
@@ -666,7 +712,7 @@ export function createRoyale(api) {
 
   function canCash() {
     const m = me();
-    if (!m?.alive || m.cashed || alive().length <= 1) return false;
+    if (!m?.alive || m.cashed || realAlive().length <= 1) return false;
     return phase === "card" || phase === "between" || (phase === "pick" && round > 1);
   }
 
@@ -699,7 +745,7 @@ export function createRoyale(api) {
     $("ry-round").textContent = phase === "lobby" ? "—" : phase === "win" ? "FT" : `R${round}`;
     el.innerHTML = "";
     if (phase === "lobby") return;
-    const remaining = Math.max(1, Math.ceil(Math.log2(Math.max(2, alive().length))));
+    const remaining = Math.max(1, Math.ceil(Math.log2(Math.max(2, realAlive().length))));
     const total = history.length + (phase === "win" ? 0 : remaining);
     for (let i = 0; i < total; i++) {
       const pip = document.createElement("i");
@@ -825,6 +871,8 @@ export function createRoyale(api) {
     result = null;
     locked = false;
     enterRunning();
+    clearBotPicks();
+    for (const p of players) if (p.bot && p.alive && !p.pos) place(p, randSpot(), true);
     focus = { ...hottest() };
     api.game.state = "focus";
     api.game.power = 0;
@@ -890,12 +938,27 @@ export function createRoyale(api) {
   function applyVerdict() {
     const mask = Number(result.survivorMask);
     const a = alive();
+    const goal = normOutcome(result.outcome) === "goal";
+    let R = Number(result.radiusMm) / 1000;
     for (const p of a) {
       p.d = p.pos ? Math.hypot(p.pos.x - target.x, p.pos.y - target.y) : Infinity;
-      p.verdict = bit(mask, p.seat) ? "safe" : "out";
+      p.forced = false;
+      if (!p.bot) p.verdict = bit(mask, p.seat) ? "safe" : "out";
     }
-    blast = { R: Number(result.radiusMm) / 1000, n: a.length, survivors: a.filter((p) => p.verdict === "safe").length };
-    if (debug) debugAssert(a, mask);
+    const real = a.filter((p) => !p.bot);
+    const realSafe = real.filter((p) => p.verdict === "safe");
+    // chain kept the last player standing through a save (solo game): draw the kill zone short of them
+    if (!goal && realSafe.length === 1 && realSafe[0].d <= R) R = Math.max(0.2, realSafe[0].d - 0.25);
+    // bots follow the drawn blast; when the chain ends the game this round, every bot goes out
+    const final = realSafe.length <= 1;
+    for (const p of a) {
+      if (!p.bot) continue;
+      const geomSafe = (p.d <= R) === goal;
+      p.verdict = final || !geomSafe ? "out" : "safe";
+      p.forced = final && geomSafe;
+    }
+    blast = { R, n: a.length, survivors: a.filter((p) => p.verdict === "safe").length };
+    if (debug) debugAssert(real, mask);
   }
 
   // debug only (?debug): re-derive the blast with the client's old maths on integer mm and compare
@@ -943,7 +1006,7 @@ export function createRoyale(api) {
     if (v === "out") { cz.toast(`Eliminated in round ${round}`, "bad"); sfx.play("eliminated"); }
     else if (v === "safe") sfx.play("advance");
     // survivors get the offer: take the seat value now, or ride
-    const offer = m?.alive && alive().length > 1;
+    const offer = m?.alive && realAlive().length > 1;
     cardLen = offer ? T.card + 1.6 : T.card;
     $("ry-offer").classList.toggle("show", !!offer);
     if (offer) {
@@ -952,7 +1015,7 @@ export function createRoyale(api) {
       $("ry-offer-cash").textContent = `Cash out ◎${fmtMon(seatValue(), 3)}`;
     }
     $("ry-card").className = `res show ${outcome}`;
-    setPhase(`Round ${round}`, alive().length <= 1 ? "Final result" : "Next round");
+    setPhase(`Round ${round}`, realAlive().length <= 1 ? "Final result" : "Next round");
     $("ry-outcome").className = `ry-outcome ${outcome}`;
     resolvedQ = resolvedQ.filter((x) => Number(x.round) !== round);
     updateStats();
@@ -996,7 +1059,7 @@ export function createRoyale(api) {
 
   function nextRound() {
     $("ry-card").classList.remove("show");
-    if (alive().length <= 1 || fin) return showWinner();
+    if (realAlive().length <= 1 || fin) return showWinner();
     if (pendingPick) { pendingPick = false; beginRound(true); return; }
     phase = "between";
     setPhase(`Round ${round}`, "Next round starting");
@@ -1019,7 +1082,7 @@ export function createRoyale(api) {
       net.wallet.refreshBalance();
     }
   }
-  const winnerAddr = () => (fin?.winner ? String(fin.winner).toLowerCase() : alive()[0]?.addr ?? null);
+  const winnerAddr = () => (fin?.winner ? String(fin.winner).toLowerCase() : realAlive()[0]?.addr ?? null);
   const winnerIsMe = () => !!winnerAddr() && winnerAddr() === myAddr();
   function fillWinner() {
     const addr = winnerAddr();
@@ -1254,7 +1317,7 @@ export function createRoyale(api) {
         const reached = blastRadiusPx() >= p.d * PPM;
         const settled = phase === "card" || t > T.blast * 0.75;
         if (p.verdict === "safe" && (reached || settled)) col = SAFE;
-        if (p.verdict === "out" && (outcome === "saved" ? reached : settled)) {
+        if (p.verdict === "out" && (outcome === "saved" && !p.forced ? reached : settled)) {
           col = KILL;
           a = phase === "card" ? Math.max(0.25, 1 - t / 1.2) : 1;
         }
